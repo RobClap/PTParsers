@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/RobClap/goNessusParser"
+	"github.com/RobClap/PTParsers/nessus"
 )
 
 var serve = flag.Bool("serve", false, "If specified runs in server mode")
@@ -23,7 +23,7 @@ func main() {
 				errCheck(errWrite)
 				errParse := goNessusParser.Parse(inputReader, outputWriter, *severity, *sep)
 		*/
-		errParse := goNessusParser.Parse(*file, *file+".csv", *severity, *sep)
+		errParse := nessus.Parse(*file, *file+".csv", *severity, *sep)
 		errCheck(errParse)
 	}
 }

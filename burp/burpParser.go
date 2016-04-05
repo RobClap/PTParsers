@@ -39,7 +39,9 @@ func Parse(inputFile, outputFile string, severity, colSep string) error {
 		for issueHost, issueLocs := range issueHosts {
 			fmt.Println("\t" + issueHost.FQDN + " (" + issueHost.IP + ") [" + strconv.Itoa(len(issueLocs)) + "]")
 			for _, issueLoc := range issueLocs {
-				fmt.Println("\t\t" + string(issueLoc))
+				if tmp := string(issueLoc); issueLoc != "/" {
+					fmt.Println("\t\t" + tmp)
+				}
 			}
 		}
 	}
