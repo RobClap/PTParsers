@@ -8,6 +8,7 @@ import (
 )
 
 type IssueName string
+type IssueLocation string
 type Host struct {
 	IP   string
 	FQDN string
@@ -18,16 +19,29 @@ func Parse(inputFile, outputFile string, severity, colSep string) error {
 	doc, myErr := PTParsers.ParseXML(inputFile)
 	defer doc.Free()
 	issues, _ := doc.Search("//issue")
-	var issuesMap = make(map[IssueName][]Host) //TODO use a map for hosts, count issues by host
+	var issuesMap = make(map[IssueName]map[Host][]IssueLocation)
 	for _, issue := range issues {
-		hostNode, _ := issue.Search("host")
-		hostname := hostNode[0].Content()
+		hostNodes, _ := issue.Search("host")
+		hostname := hostNodes[0].Content()
+		hostIP := hostNodes[0].Attributes()["ip"].Content()
+		locationNodes, _ := issue.Search("location")
+		location := IssueLocation(locationNodes[0].Content())
 		nameNode, _ := issue.Search("name")
 		nameContent := IssueName(nameNode[0].Content())
-		issuesMap[nameContent] = append(issuesMap[nameContent], Host{"", hostname})
+		if issuesMap[nameContent] == nil {
+			issuesMap[nameContent] = make(map[Host][]IssueLocation)
+		}
+		issuesMap[nameContent][Host{hostIP, hostname}] = append(issuesMap[nameContent][Host{hostIP, hostname}], location)
 	}
 	for issueName, issueHosts := range issuesMap {
-		fmt.Println(string(issueName) + " " + strconv.Itoa(len(issueHosts)))
+		fmt.Println()
+		fmt.Println(string(issueName) + " [" + strconv.Itoa(len(issueHosts)) + "]")
+		for issueHost, issueLocs := range issueHosts {
+			fmt.Println("\t" + issueHost.FQDN + " (" + issueHost.IP + ") [" + strconv.Itoa(len(issueLocs)) + "]")
+			for _, issueLoc := range issueLocs {
+				fmt.Println("\t\t" + string(issueLoc))
+			}
+		}
 	}
 	return myErr
 }
