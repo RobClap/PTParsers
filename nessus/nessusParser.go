@@ -12,7 +12,10 @@ func Parse(inputFile string, outputFile string, severity, colSep string) error {
 	defer doc.Free()
 	reportItems, _ := doc.Search("//ReportItem") //TODO check the err
 	for _, reportItem := range reportItems {
-		//do the parse
+		/*do the parse. Relevant tables are :
+		 * the table host/problems (see ex.rb)
+		 * the table issue/hostcount
+		 */
 		fmt.Println(reportItem.Content())
 	}
 	return myErr
