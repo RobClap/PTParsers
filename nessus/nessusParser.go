@@ -9,6 +9,9 @@ do the parse. Relevant tables are :
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/RobClap/PTParsers"
 	"github.com/moovweb/gokogiri/xml"
@@ -23,6 +26,7 @@ var simpleDefinitions = map[string]string{
 }
 
 func Parse(inputFile string, outputFile string, severity, colSep string) (myErr error) {
+	fmt.Fprintln(os.Stderr, "Opening "+inputFile)
 	doc, myErr := PTParsers.ParseXML(inputFile)
 	defer doc.Free()
 	_ = sslIssuesTable(doc, severity, colSep)
@@ -38,9 +42,11 @@ type service struct {
 func sslIssuesTable(doc *xml.XmlDocument, severity, colSep string) (myErr error) {
 	table := make(map[service]row)
 	reportHosts, _ := doc.Search("//ReportHost")
-	for _, reportHost := range reportHosts {
+	for i, reportHost := range reportHosts {
+		fmt.Println("\nHost " + strconv.Itoa(i) + "/" + strconv.Itoa(len(reportHosts)))
 		reportItems, _ := reportHost.Search("//ReportItem") //TODO check the err
-		for _, reportItem := range reportItems {
+		for j, reportItem := range reportItems {
+			fmt.Print("\rItem " + strconv.Itoa(j) + "/" + strconv.Itoa(len(reportItems)))
 			tmp, _ := reportHost.Search("//name")
 			ip := service{(tmp[0].Content()), 0} //TODO parse port!
 			if table[ip] == nil {
@@ -52,11 +58,18 @@ func sslIssuesTable(doc *xml.XmlDocument, severity, colSep string) (myErr error)
 			case simpleDefinitions[plugin_name] != "":
 				table[ip][simpleDefinitions[plugin_name]] = "*"
 			case plugin_name == "SSL / TLS Versions Supported":
-				fmt.Println("TODO detect SSl version")
+				tmp, _ := reportItem.Search("//plugin_output")
+				tmpstr := tmp[0].Content()
+				if strings.Contains(tmpstr, "SSLv2") {
+					table[ip]["SSLv2"] = "*"
+				}
+				if strings.Contains(tmpstr, "SSLv3") {
+					table[ip]["SSLv3"] = "*"
+				}
 			default:
 			}
 		}
 	}
-
+	fmt.Println(table)
 	return
 }
