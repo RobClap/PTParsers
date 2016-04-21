@@ -2,20 +2,25 @@ package nessus
 
 /* TODO
 do the parse. Relevant tables are :
- * the table host/problems (see ex.rb)
+ * the table host/problems (see ex.rb) (MOSTLY DONE)
  * the table issue/hostcount
- * the full csv translation (see simple-nessus)
+ * TODO instead of using bullet use boolean, convert while printing
+ * TODO sort table
 */
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/RobClap/PTParsers"
+	"github.com/empijei/PTParsers"
 	"github.com/moovweb/gokogiri/xml"
 )
+
+const bullet = "*"
 
 var simpleDefinitions = map[string]string{
 	"SSL RC4 Cipher Suites Supported (Bar Mitzvah)":                               "RC4",
@@ -36,40 +41,87 @@ func Parse(inputFile string, outputFile string, severity, colSep string) (myErr 
 type row map[string]string
 type service struct {
 	IP   string
+	FQDN string
 	Port int
 }
 
 func sslIssuesTable(doc *xml.XmlDocument, severity, colSep string) (myErr error) {
 	table := make(map[service]row)
+	usedHeaders := make(map[string]bool)
 	reportHosts, _ := doc.Search("//ReportHost")
 	for i, reportHost := range reportHosts {
-		fmt.Println("\nHost " + strconv.Itoa(i) + "/" + strconv.Itoa(len(reportHosts)))
-		reportItems, _ := reportHost.Search("//ReportItem") //TODO check the err
+		reportItems, _ := reportHost.Search("ReportItem") //TODO check the err
 		for j, reportItem := range reportItems {
-			fmt.Print("\rItem " + strconv.Itoa(j) + "/" + strconv.Itoa(len(reportItems)))
-			tmp, _ := reportHost.Search("//name")
-			ip := service{(tmp[0].Content()), 0} //TODO parse port!
-			if table[ip] == nil {
-				table[ip] = make(row)
+			ip := reportHost.Attribute("name").Content()
+			port, _ := strconv.Atoi(reportItem.Attribute("port").Content())
+			fqdns, _ := reportHost.Search("./HostProperties/tag[@name=\"host-fqdn\"]")
+			fqdn := ""
+			if len(fqdns) > 0 {
+				fqdn = fqdns[0].Content()
+			}
+			_service := service{ip, fqdn, port}
+			fmt.Fprint(os.Stderr, "\rHost "+strconv.Itoa(i+1)+"/"+strconv.Itoa(len(reportHosts)))
+			fmt.Fprint(os.Stderr, "	"+_service.IP+" Item "+strconv.Itoa(j+1)+"/"+strconv.Itoa(len(reportItems))+"                 ")
+			if table[_service] == nil {
+				table[_service] = make(row)
 			}
 			plugin_names, _ := reportItem.Search("plugin_name")
 			plugin_name := plugin_names[0].Content()
 			switch {
 			case simpleDefinitions[plugin_name] != "":
-				table[ip][simpleDefinitions[plugin_name]] = "*"
+				table[_service][simpleDefinitions[plugin_name]] = bullet
+				usedHeaders[simpleDefinitions[plugin_name]] = true
 			case plugin_name == "SSL / TLS Versions Supported":
-				tmp, _ := reportItem.Search("//plugin_output")
+				tmp, _ := reportItem.Search("plugin_output")
 				tmpstr := tmp[0].Content()
 				if strings.Contains(tmpstr, "SSLv2") {
-					table[ip]["SSLv2"] = "*"
+					table[_service]["SSLv2"] = bullet
+					usedHeaders["SSLv2"] = true
 				}
 				if strings.Contains(tmpstr, "SSLv3") {
-					table[ip]["SSLv3"] = "*"
+					table[_service]["SSLv3"] = bullet
+					usedHeaders["SSLv3"] = true
 				}
 			default:
 			}
 		}
 	}
-	fmt.Println(table)
+	fmt.Fprintln(os.Stderr, "")
+	printTable(table, usedHeaders, colSep)
 	return
+}
+
+func printTable(table map[service]row, usedHeaders map[string]bool, colSep string) {
+	csvout := csv.NewWriter(os.Stdout)
+	csvout.Comma = rune(colSep[0])
+	recordlen := 3 + len(usedHeaders)
+	headers := make([]string, 3, recordlen)
+	headers[0] = "Host"
+	headers[1] = "FQDN"
+	headers[2] = "port"
+	i := 0
+	dynamicHeaders := make([]string, recordlen-3)
+	for header, _ := range usedHeaders {
+		dynamicHeaders[i] = header
+		i++
+	}
+	sort.Strings(dynamicHeaders)
+	headers = append(headers, dynamicHeaders...)
+	err := csvout.Write(headers)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	for host, problems := range table {
+		if len(problems) > 0 {
+			record := make([]string, recordlen)
+			record[0] = host.IP
+			record[1] = host.FQDN
+			record[2] = strconv.Itoa(host.Port)
+			for j, header := range headers[3:] {
+				record[j+3] = problems[header]
+			}
+			_ = csvout.Write(record)
+		}
+	}
+	csvout.Flush()
 }

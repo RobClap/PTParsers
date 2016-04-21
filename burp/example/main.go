@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/RobClap/PTParsers/burp"
+	"github.com/empijei/PTParsers/burp"
 )
 
 var serve = flag.Bool("serve", false, "If specified runs in server mode")

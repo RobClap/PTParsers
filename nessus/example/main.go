@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/RobClap/PTParsers/nessus"
+	"github.com/empijei/PTParsers/nessus"
 )
 
 var serve = flag.Bool("serve", false, "If specified runs in server mode")
