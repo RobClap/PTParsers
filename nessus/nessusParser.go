@@ -22,7 +22,9 @@ import (
 
 const bullet = "*"
 
+//TODO add medium strength cipher
 var simpleDefinitions = map[string]string{
+	"SMTP Service STARTTLS Plaintext Command Injection":                           "STARTTLS",
 	"SSL RC4 Cipher Suites Supported (Bar Mitzvah)":                               "RC4",
 	"SSL/TLS EXPORT_DHE <= 512-bit Export Cipher Suites Supported (Logjam)":       "DHE",
 	"SSL Weak Cipher Suites Supported":                                            "Weak Cipher",
