@@ -30,6 +30,10 @@ var simpleDefinitions = map[string]string{
 	"SSL Weak Cipher Suites Supported":                                            "Weak Cipher",
 	"SSL/TLS EXPORT_RSA &lt;= 512-bit Cipher Suites Supported (FREAK)":            "FREAK",
 	"SSLv3 Padding Oracle On Downgraded Legacy Encryption Vulnerability (POODLE)": "POODLE",
+	"SSL Certificate Signed Using Weak Hashing Algorithm":                         "SSL Weak Hash",
+	"SSL Self-Signed Certificate":                                                 "Self Signed",
+	"SSL Certificate Expiry":                                                      "Certificate Expired",
+	"SSL Certificate Chain Contains RSA Keys Less Than 2048 bits":                 "Certificate with RSA key shorter than 2048b",
 }
 
 func Parse(inputFile string, outputFile string, severity, colSep string) (myErr error) {
